@@ -783,10 +783,22 @@ async function fetchPubChemNotes(name, cas, fromScan) {
       }
     }
 
+    let inferredHazard = '';
     if (safeRes && safeRes.ok) {
       const safeData = await safeRes.json();
       const ghsPhrases = extractGHSPhrases(safeData);
       if (ghsPhrases.length) noteParts.push(...ghsPhrases);
+      const hCodes = ghsPhrases
+        .filter(p => p.startsWith('Hazard:'))
+        .map(p => { const m = p.match(/H(\d{3})/); return m ? parseInt(m[1]) : null; })
+        .filter(Boolean);
+      inferredHazard = inferHazardClass(hCodes);
+    }
+
+    if (inferredHazard && !document.getElementById('f_hazard').value) {
+      document.getElementById('f_hazard').value = inferredHazard;
+      document.getElementById('f_hazard').style.background = 'var(--success-bg)';
+      document.getElementById('f_hazard').style.borderColor = '#a8d5b5';
     }
 
     // Append PubChem link for reference
@@ -794,14 +806,15 @@ async function fetchPubChemNotes(name, cas, fromScan) {
 
     if (noteParts.length) {
       const existing = document.getElementById('f_notes').value.trim();
-      const newNotes = (existing ? existing + '\n' : '') + noteParts.join('\n');
+      const newNotes = (existing ? existing + '\\n' : '') + noteParts.join('\\n');
       setField('f_notes', newNotes);
     }
 
     const finalName = name || query;
+    const hazardMsg = inferredHazard ? ' Hazard class: <strong>' + escHtml(inferredHazard) + '</strong>.' : '';
     setStatus('lookupStatus', 'success',
-      '&#10003; Found: <strong>' + escHtml(finalName) + '</strong>. ' +
-      'Notes populated from PubChem (CID ' + cid + '). Review all fields &mdash; fill in Location and Hazard Class.');
+      '&#10003; Found: <strong>' + escHtml(finalName) + '</strong>.' + hazardMsg +
+      ' Notes populated from PubChem. Review all fields &mdash; fill in Location.');
 
   } catch(e) {
     // PubChem lookup is best-effort — don't override a successful UPC status with an error
@@ -812,6 +825,23 @@ async function fetchPubChemNotes(name, cas, fromScan) {
         '&#10003; Found product. PubChem details unavailable for this chemical — fill Notes manually.');
     }
   }
+}
+
+function inferHazardClass(hCodes) {
+  // Map GHS H-code numbers to dropdown values
+  // Priority order: most specific/dangerous first
+  if (!hCodes || !hCodes.length) return '';
+  const has = n => hCodes.includes(n);
+  const inRange = (a,b) => hCodes.some(n => n >= a && n <= b);
+  if (inRange(200,210) || inRange(240,243)) return 'Explosive';
+  if (inRange(280,281)) return 'Compressed Gas';
+  if (inRange(270,272)) return 'Oxidizer';
+  if (inRange(224,228) || inRange(242,242)) return 'Flammable';
+  if (inRange(290,290) || inRange(314,314) || inRange(318,318)) return 'Corrosive';
+  if (inRange(300,310) || inRange(330,331) || inRange(370,373)) return 'Toxic';
+  if (inRange(360,362) || inRange(400,413)) return 'Environmental Hazard';
+  if (inRange(315,317) || inRange(319,336)) return 'Toxic'; // irritant/harmful
+  return 'Other';
 }
 
 function extractGHSPhrases(data) {
@@ -938,7 +968,10 @@ function clearForm() {
   ['f_barcode','f_name','f_mfr','f_sku','f_cas','f_size','f_qty','f_loc','f_notes'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('f_hazard').value = '';
+  const hEl = document.getElementById('f_hazard');
+  hEl.value = '';
+  hEl.style.background = '';
+  hEl.style.borderColor = '';
   clearAutoHighlights();
   setBadge('manual');
   currentSource = 'manual';
