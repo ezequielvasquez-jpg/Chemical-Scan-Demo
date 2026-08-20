@@ -316,6 +316,7 @@
   .col-cas { width: 85px; }
   .col-size { width: 70px; }
   .col-qty { width: 44px; text-align: center; }
+  .col-site { width: 90px; }
   .col-loc { width: 90px; }
   .col-src { width: 60px; }
   .col-sds { width: 80px; }
@@ -472,6 +473,24 @@
               <input type="number" id="f_qty" placeholder="1" min="0" />
             </div>
           </div>
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Site</label>
+            <select id="f_site">
+              <option value="">— select site —</option>
+              <option>Goleta</option>
+              <option>Santa Barbara</option>
+              <option>Boston</option>
+              <option>Seattle</option>
+              <option>Louisville</option>
+              <option>Glasgow</option>
+              <option>Hilversum</option>
+              <option>London</option>
+              <option>Nieuw-Vennep</option>
+              <option>Paris</option>
+              <option>Shanghai</option>
+              <option>Shenzhen</option>
+            </select>
+          </div>
           <div class="form-grid form-row-2">
             <div class="form-group">
               <label class="form-label">Storage location</label>
@@ -555,6 +574,7 @@
               <th class="col-cas">CAS no.</th>
               <th class="col-size">Size</th>
               <th class="col-qty">Qty</th>
+              <th class="col-site">Site</th>
               <th class="col-loc">Location</th>
               <th class="col-src">Source</th>
               <th class="col-sds">SDS</th>
@@ -911,6 +931,7 @@ function addToInventory() {
     cas:    document.getElementById('f_cas').value.trim(),
     size:   document.getElementById('f_size').value.trim(),
     qty:    document.getElementById('f_qty').value.trim() || '1',
+    site:   document.getElementById('f_site').value,
     loc:    document.getElementById('f_loc').value.trim(),
     hazard: document.getElementById('f_hazard').value,
     notes:  document.getElementById('f_notes').value.trim(),
@@ -965,6 +986,7 @@ function removeItem(i) {
 }
 
 function clearForm() {
+  document.getElementById('f_site').value = '';
   ['f_barcode','f_name','f_mfr','f_sku','f_cas','f_size','f_qty','f_loc','f_notes'].forEach(id => {
     document.getElementById(id).value = '';
   });
@@ -987,9 +1009,9 @@ function clearAll() {
 }
 
 function exportCSV() {
-  const headers = ['Barcode/ID','Chemical Name','Manufacturer','Product Code','CAS Number','Container Size','Qty on Hand','Storage Location','Hazard Class','Notes','Source','Date Added'];
+  const headers = ['Barcode/ID','Chemical Name','Manufacturer','Product Code','CAS Number','Container Size','Qty on Hand','Site','Storage Location','Hazard Class','Notes','Source','Date Added'];
   const rows = inventory.map(r =>
-    [r.barcode,r.name,r.mfr,r.sku,r.cas,r.size,r.qty,r.loc,r.hazard,r.notes,r.source,r.date]
+    [r.barcode,r.name,r.mfr,r.sku,r.cas,r.size,r.qty,r.site,r.loc,r.hazard,r.notes,r.source,r.date]
       .map(v => '"' + (v||'').replace(/"/g,'""') + '"').join(',')
   );
   const csv = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
